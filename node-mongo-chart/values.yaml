@@ -1,0 +1,77 @@
+## Role Based Access Control
+## Ref: https://kubernetes.io/docs/admin/authorization/rbac/
+
+mongodb:
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/mongodb
+    tag: 6.0.8-debian-11-r0
+  enabled: true
+  persistence:
+    size: 2Gi
+  # resources:
+  #  requests:
+  #    memory: "12Gi"
+  #    cpu: "200m"
+  #  limits:
+  #    memory: "12Gi"
+  #    cpu: "2"
+  ## Make sure the --wiredTigerCacheSizeGB is no more than half the memory limit!
+  ## This is critical to protect against OOMKill by Kubernetes!
+  extraFlags:
+  - "--wiredTigerCacheSizeGB=1"
+  auth:
+    rootPassword:
+    usernames:
+    - test1
+    databases:
+    - db_1_test
+
+initContainerImage: "alpine:3.18"
+imagePullSecrets:
+replicaCount: 1
+
+image:
+  repository: patrah2/node-mongo
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  internalPort: 3000
+  externalPort: 80
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

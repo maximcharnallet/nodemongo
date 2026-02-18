@@ -1,0 +1,204 @@
+<html>
+	<header>
+		<title>MyApp</title>
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.6/handlebars.min.js"></script>
+
+	</header>
+
+		<script>
+			
+			var user_list_template = `
+		<table width:200px>
+		    <thead>
+		      <tr>
+		        <th>Firstname</th>
+		        <th>Lastname</th>
+		        <th colspan="2">Actions</th>
+		      </tr>
+		    </thead>
+		    <tbody>
+			    {{#each users}}
+			    	<tr><td style='display:none;'>{{this._id}}</td>
+			    		<td>{{this.firstname}}</td>
+			    		<td>{{this.lastname}}</td>
+			    		<td><button onclick='edit_user(\"{{this._id}}\")'>Edit</button></td>
+			    		<td><button onclick='delete_user(\"{{this._id}}\")'>Remove</button></td>
+			    	</tr>
+			    {{/each}}
+		  	</tbody>
+		 </table>`;
+
+			var user_list_compiled_template = Handlebars.compile(user_list_template);
+
+			function isEmpty(val) {
+    			return (val === undefined || val == null || val.length <= 0) ? true : false;
+  			}
+
+			function save_user(form) {
+			console.log(form.firstname.value);
+				if (!isEmpty(form.uid.value)) {
+					update_user(form);
+				} else {
+					add_user(form);	
+				}
+			}
+
+			function add_user(form) {		
+				var payload = {};
+				payload['firstname'] = form.firstname.value;
+				payload['lastname'] = form.lastname.value;
+				
+				var myHeaders = new Headers();
+
+				myHeaders.append('Content-Type', 'application/json');
+				
+				var myInit = { method: 'POST',
+               				   headers: myHeaders,
+               				   body:  JSON.stringify( payload )};
+                
+                var myRequest = new Request('users', myInit);
+
+				fetch(myRequest).then(function(res){ 
+					if (res.ok) {
+						var location = res.headers.get('Location');
+						console.log('_id ='+location);						
+						reset_form();
+						load_users();
+					}
+				});				
+			}
+
+			function update_user(form) {
+				var uid = form.uid.value;
+				var payload = {};
+				payload['_id'] = uid;
+				payload['firstname'] = form.firstname.value;
+				payload['lastname'] = form.lastname.value;
+				
+				var myHeaders = new Headers();
+
+				myHeaders.append('Content-Type', 'application/json');
+				
+				var myInit = { method: 'PUT',
+               				   headers: myHeaders,
+               				   body:  JSON.stringify( payload )};
+                
+                var myRequest = new Request('users', myInit);
+
+				fetch(myRequest).then(function(res){ 
+					if (res.ok) {
+						reset_form();
+    					load_users();					
+					}
+				});	
+			}
+
+			function load_users() {				
+				var myHeaders = new Headers();
+				myHeaders.append('Content-Type', 'application/json');
+				var myInit = { method: 'GET',
+               				   headers: myHeaders };
+                var myRequest = new Request('users', myInit);
+			   	fetch(myRequest).then(function(res) {
+  					if(res.ok) {
+  						var contentType = res.headers.get("content-type");
+  						if(contentType && contentType.indexOf("application/json") !== -1) {
+    						res.json().then(function(json) {
+      							users = json;
+      							// NEW: using handlebars template engine to display the list
+								document.getElementById('myUserList').innerHTML = user_list_compiled_template({ users: json });
+    						});
+  						} else {
+    						console.log("Oops, we haven't got JSON!");
+  						}
+  					} else {
+  						console.log('Network response was not ok status '+ res.status);
+  					}
+				}).catch(function(error) {
+  					console.log('There has been a problem with your fetch operation: ' + error.message);
+				});
+			}	
+
+			function delete_user(uid) {
+				var myHeaders = new Headers();
+				var myInit = { method: 'DELETE',
+               				   headers: myHeaders};
+                
+                var myRequest = new Request('users'+ '/' + uid, myInit);
+
+				fetch(myRequest).then(function(res){ 
+					if (res.ok) {
+						load_users();
+					}
+				});	
+			}
+
+			function reset_form() {
+				var form = document.getElementById("myForm");
+				form.reset();
+				form.uid.value = null;
+			}
+
+			function edit_user(uid) {
+				for (var user of users) {
+  					if (user._id == uid) {
+						var form = document.getElementById('myForm');
+						form.uid.value = user._id;
+						form.firstname.value = user.firstname;
+						form.lastname.value = user.lastname;
+						break;
+					}
+				}
+			}
+
+			document.addEventListener("DOMContentLoaded", function(event) {    			
+				load_users();
+  			});	
+
+  			var w;
+
+			function startWorker() {
+			    if(typeof(Worker) !== "undefined") {
+			        if(typeof(w) == "undefined") {
+			            w = new Worker("myworker");
+			        }
+			        w.onmessage = function(event) {
+			            document.getElementById("result").innerHTML = event.data;
+			        };
+			    } else {
+			        document.getElementById("result").innerHTML = "Sorry! No Web Worker support.";
+			    }
+			}
+
+			function stopWorker() { 
+			    w.terminate();
+			    w = undefined;
+			}	
+
+		</script>
+
+	<body>
+
+		<!-- <p>Count numbers: <output id="result"></output></p>
+		<button onclick="startWorker()">Start Worker</button> 
+		<button onclick="stopWorker()">Stop Worker</button> -->
+
+		<h1>User Form</h1>
+
+		<form id="myForm" onsubmit="save_user(this); return false;">
+  			<input type="hidden" placeholder="uid" name="uid">
+  			<br>
+  			<input type="text" placeholder="firstname" name="firstname">
+  			<br>
+  			<input type="text" placeholder="lastname" name="lastname">
+  			<br>
+  			<button type="submit">Save</button>
+		</form>
+		
+		<h1>User list</h1>
+		
+		<div id="myUserList">		  
+		</div>
+	</body>
+</html>
